@@ -1,0 +1,1421 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  useAllOrders,
+  useCategories,
+  useCoupons,
+  useCreateCategory,
+  useCreateCoupon,
+  useCreateGiftCard,
+  useCreateProduct,
+  useDeleteCategory,
+  useDeleteProduct,
+  usePaymentInfo,
+  useProducts,
+  useSetPaymentInfo,
+  useToggleCoupon,
+  useUpdateCategory,
+  useUpdateOrderStatus,
+  useUpdateProduct,
+  useVerifyStaffCode,
+} from "@/hooks/useQueries";
+import {
+  Check,
+  CreditCard,
+  Eye,
+  EyeOff,
+  Gift,
+  Grid3X3,
+  Loader2,
+  Lock,
+  Package,
+  Pencil,
+  Plus,
+  ShoppingBag,
+  Tag,
+  Trash2,
+  X,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import type { Coupon, Product } from "../backend.d";
+
+const STAFF_SESSION_KEY = "frost_staff_auth";
+
+function formatPrice(pence: bigint): string {
+  return `£${(Number(pence) / 100).toFixed(2)}`;
+}
+
+function formatDate(ns: bigint): string {
+  return new Date(Number(ns) / 1_000_000).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+const STATUS_OPTIONS = [
+  "pending",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
+
+// ── Staff Login ────────────────────────────────────────────────────────────────
+function StaffLogin({
+  onSuccess,
+}: {
+  onSuccess: () => void;
+}) {
+  const [code, setCode] = useState("");
+  const [showCode, setShowCode] = useState(false);
+  const verify = useVerifyStaffCode();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code) return;
+    try {
+      const ok = await verify.mutateAsync(code);
+      if (ok) {
+        sessionStorage.setItem(STAFF_SESSION_KEY, "true");
+        onSuccess();
+      } else {
+        toast.error("Invalid staff code");
+      }
+    } catch {
+      toast.error("Verification failed");
+    }
+  };
+
+  return (
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-sm"
+      >
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-primary mb-4">
+            <Lock className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <h1 className="font-display text-2xl font-bold">Staff Panel</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Enter your staff code to continue
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="crystal-card rounded-2xl p-8 space-y-4"
+        >
+          <div>
+            <Label htmlFor="staff-code">Staff Code</Label>
+            <div className="relative mt-1">
+              <Input
+                id="staff-code"
+                type={showCode ? "text" : "password"}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Enter staff code"
+                className="pr-10"
+                data-ocid="staff.code.input"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowCode((v) => !v)}
+                data-ocid="staff.code.toggle"
+              >
+                {showCode ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11"
+            disabled={verify.isPending || !code}
+            data-ocid="staff.login.button"
+          >
+            {verify.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Verifying…
+              </>
+            ) : (
+              "Access Staff Panel"
+            )}
+          </Button>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+// ── Products Tab ───────────────────────────────────────────────────────────────
+function ProductsTab() {
+  const { data: products, isLoading } = useProducts();
+  const { data: categories } = useCategories();
+  const createProduct = useCreateProduct();
+  const updateProduct = useUpdateProduct();
+  const deleteProduct = useDeleteProduct();
+
+  const emptyForm = {
+    name: "",
+    description: "",
+    price: "",
+    stock: "",
+    categoryId: "",
+    imageUrl: "",
+    active: true,
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [editId, setEditId] = useState<bigint | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const openEdit = (product: Product) => {
+    setEditId(product.id);
+    setForm({
+      name: product.name,
+      description: product.description,
+      price: (Number(product.price) / 100).toString(),
+      stock: product.stock.toString(),
+      categoryId: product.categoryId.toString(),
+      imageUrl: product.imageUrl,
+      active: product.active,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.name || !form.price || !form.stock) {
+      toast.error("Please fill in required fields");
+      return;
+    }
+    const productData: Product = {
+      id: editId ?? BigInt(0),
+      name: form.name,
+      description: form.description,
+      price: BigInt(Math.round(Number.parseFloat(form.price) * 100)),
+      stock: BigInt(Number.parseInt(form.stock) || 0),
+      categoryId: form.categoryId ? BigInt(form.categoryId) : BigInt(0),
+      imageUrl: form.imageUrl,
+      active: form.active,
+    };
+    try {
+      if (editId !== null) {
+        await updateProduct.mutateAsync({ id: editId, product: productData });
+        toast.success("Product updated");
+      } else {
+        await createProduct.mutateAsync(productData);
+        toast.success("Product created");
+      }
+      setForm(emptyForm);
+      setEditId(null);
+      setDialogOpen(false);
+    } catch {
+      toast.error("Failed to save product");
+    }
+  };
+
+  const handleDelete = async (id: bigint) => {
+    try {
+      await deleteProduct.mutateAsync(id);
+      toast.success("Product deleted");
+    } catch {
+      toast.error("Failed to delete product");
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-display font-bold text-lg">Products</h2>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setForm(emptyForm);
+              setEditId(null);
+            }
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-9"
+              data-ocid="staff.product.open_modal_button"
+            >
+              <Plus className="h-4 w-4" />
+              Add Product
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg" data-ocid="staff.product.dialog">
+            <DialogHeader>
+              <DialogTitle>
+                {editId !== null ? "Edit Product" : "New Product"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-3 py-2">
+              <div className="col-span-2">
+                <Label>Name *</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  placeholder="Product name"
+                  className="mt-1"
+                  data-ocid="staff.product.name.input"
+                />
+              </div>
+              <div className="col-span-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description: e.target.value }))
+                  }
+                  placeholder="Product description"
+                  className="mt-1"
+                  rows={2}
+                  data-ocid="staff.product.description.textarea"
+                />
+              </div>
+              <div>
+                <Label>Price (£) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.price}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, price: e.target.value }))
+                  }
+                  placeholder="9.99"
+                  className="mt-1"
+                  data-ocid="staff.product.price.input"
+                />
+              </div>
+              <div>
+                <Label>Stock *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={form.stock}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, stock: e.target.value }))
+                  }
+                  placeholder="100"
+                  className="mt-1"
+                  data-ocid="staff.product.stock.input"
+                />
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Select
+                  value={form.categoryId}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, categoryId: v }))
+                  }
+                >
+                  <SelectTrigger
+                    className="mt-1"
+                    data-ocid="staff.product.category.select"
+                  >
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories?.map((cat) => (
+                      <SelectItem
+                        key={cat.id.toString()}
+                        value={cat.id.toString()}
+                      >
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Active</Label>
+                <div className="flex items-center gap-2 mt-2">
+                  <Switch
+                    checked={form.active}
+                    onCheckedChange={(v) =>
+                      setForm((f) => ({ ...f, active: v }))
+                    }
+                    data-ocid="staff.product.active.switch"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {form.active ? "Listed" : "Hidden"}
+                  </span>
+                </div>
+              </div>
+              <div className="col-span-2">
+                <Label>Image URL</Label>
+                <Input
+                  value={form.imageUrl}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, imageUrl: e.target.value }))
+                  }
+                  placeholder="https://…"
+                  className="mt-1"
+                  data-ocid="staff.product.image.input"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                data-ocid="staff.product.cancel.button"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={createProduct.isPending || updateProduct.isPending}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                data-ocid="staff.product.save.button"
+              >
+                {createProduct.isPending || updateProduct.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Save Product"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2" data-ocid="staff.product.loading_state">
+          {Array.from({ length: 4 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+            <Skeleton key={i} className="h-12 rounded" />
+          ))}
+        </div>
+      ) : !products || products.length === 0 ? (
+        <div
+          className="text-center py-12 text-muted-foreground"
+          data-ocid="staff.product.empty_state"
+        >
+          <Package className="h-8 w-8 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No products yet. Add your first product!</p>
+        </div>
+      ) : (
+        <div
+          className="rounded-lg border border-border overflow-hidden"
+          data-ocid="staff.product.table"
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Stock</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product, i) => (
+                <TableRow
+                  key={product.id.toString()}
+                  data-ocid={`staff.product.row.${i + 1}`}
+                >
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{formatPrice(product.price)}</TableCell>
+                  <TableCell>{Number(product.stock)}</TableCell>
+                  <TableCell>
+                    <Badge
+                      className={
+                        product.active
+                          ? "bg-green-100 text-green-800 border-green-200"
+                          : "bg-gray-100 text-gray-600 border-gray-200"
+                      }
+                    >
+                      {product.active ? "Active" : "Hidden"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openEdit(product)}
+                        data-ocid={`staff.product.edit.button.${i + 1}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:text-destructive"
+                            data-ocid={`staff.product.delete.button.${i + 1}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent data-ocid="staff.product.delete.dialog">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Product?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete "{product.name}".
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel data-ocid="staff.product.delete.cancel.button">
+                              Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(product.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              data-ocid="staff.product.delete.confirm.button"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Categories Tab ─────────────────────────────────────────────────────────────
+function CategoriesTab() {
+  const { data: categories, isLoading } = useCategories();
+  const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+  const deleteCategory = useDeleteCategory();
+
+  const [newName, setNewName] = useState("");
+  const [editId, setEditId] = useState<bigint | null>(null);
+  const [editName, setEditName] = useState("");
+
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    try {
+      await createCategory.mutateAsync(newName.trim());
+      setNewName("");
+      toast.success("Category created");
+    } catch {
+      toast.error("Failed to create category");
+    }
+  };
+
+  const handleUpdate = async (id: bigint) => {
+    if (!editName.trim()) return;
+    try {
+      await updateCategory.mutateAsync({ id, name: editName.trim() });
+      setEditId(null);
+      toast.success("Category updated");
+    } catch {
+      toast.error("Failed to update category");
+    }
+  };
+
+  const handleDelete = async (id: bigint) => {
+    try {
+      await deleteCategory.mutateAsync(id);
+      toast.success("Category deleted");
+    } catch {
+      toast.error("Failed to delete category");
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="font-display font-bold text-lg mb-4">Categories</h2>
+
+      {/* Add new */}
+      <div className="flex gap-3 mb-6">
+        <Input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+          placeholder="New category name"
+          className="max-w-xs"
+          data-ocid="staff.category.name.input"
+        />
+        <Button
+          onClick={handleCreate}
+          disabled={createCategory.isPending || !newName.trim()}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+          data-ocid="staff.category.add.button"
+        >
+          <Plus className="h-4 w-4" />
+          Add
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2" data-ocid="staff.category.loading_state">
+          {Array.from({ length: 3 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+            <Skeleton key={i} className="h-12 rounded" />
+          ))}
+        </div>
+      ) : !categories || categories.length === 0 ? (
+        <div
+          className="text-center py-12 text-muted-foreground"
+          data-ocid="staff.category.empty_state"
+        >
+          <Grid3X3 className="h-8 w-8 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No categories yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-2" data-ocid="staff.category.list">
+          {categories.map((cat, i) => (
+            <div
+              key={cat.id.toString()}
+              className="flex items-center justify-between p-3 rounded-lg border border-border bg-card"
+              data-ocid={`staff.category.item.${i + 1}`}
+            >
+              {editId === cat.id ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleUpdate(cat.id)}
+                    className="h-8 max-w-xs"
+                    autoFocus
+                    data-ocid={`staff.category.edit.input.${i + 1}`}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-green-600"
+                    onClick={() => handleUpdate(cat.id)}
+                    data-ocid={`staff.category.save.button.${i + 1}`}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setEditId(null)}
+                    data-ocid={`staff.category.cancel.button.${i + 1}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <span className="font-medium text-sm">{cat.name}</span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => {
+                        setEditId(cat.id);
+                        setEditName(cat.name);
+                      }}
+                      data-ocid={`staff.category.edit.button.${i + 1}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:text-destructive"
+                          data-ocid={`staff.category.delete.button.${i + 1}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent data-ocid="staff.category.delete.dialog">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Category?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Delete "{cat.name}"? Products in this category won't
+                            be automatically updated.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel data-ocid="staff.category.delete.cancel.button">
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(cat.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            data-ocid="staff.category.delete.confirm.button"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Coupons Tab ────────────────────────────────────────────────────────────────
+function CouponsTab() {
+  const { data: coupons, isLoading } = useCoupons();
+  const createCoupon = useCreateCoupon();
+  const toggleCoupon = useToggleCoupon();
+
+  const [form, setForm] = useState({
+    code: "",
+    discountType: "percent",
+    value: "",
+    active: true,
+  });
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleCreate = async () => {
+    if (!form.code.trim() || !form.value) return;
+    const coupon: Coupon = {
+      id: BigInt(0),
+      code: form.code.trim().toUpperCase(),
+      discountType: form.discountType,
+      value:
+        form.discountType === "percent"
+          ? BigInt(Number.parseInt(form.value))
+          : BigInt(Math.round(Number.parseFloat(form.value) * 100)),
+      active: form.active,
+    };
+    try {
+      await createCoupon.mutateAsync(coupon);
+      toast.success("Coupon created");
+      setForm({ code: "", discountType: "percent", value: "", active: true });
+      setDialogOpen(false);
+    } catch {
+      toast.error("Failed to create coupon");
+    }
+  };
+
+  const handleToggle = async (id: bigint, active: boolean) => {
+    try {
+      await toggleCoupon.mutateAsync({ id, active: !active });
+      toast.success(`Coupon ${!active ? "activated" : "deactivated"}`);
+    } catch {
+      toast.error("Failed to update coupon");
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-display font-bold text-lg">Coupons</h2>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-9"
+              data-ocid="staff.coupon.open_modal_button"
+            >
+              <Plus className="h-4 w-4" />
+              Create Coupon
+            </Button>
+          </DialogTrigger>
+          <DialogContent data-ocid="staff.coupon.dialog">
+            <DialogHeader>
+              <DialogTitle>Create Coupon</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <Label>Code *</Label>
+                <Input
+                  value={form.code}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      code: e.target.value.toUpperCase(),
+                    }))
+                  }
+                  placeholder="FROST20"
+                  className="mt-1 font-mono"
+                  data-ocid="staff.coupon.code.input"
+                />
+              </div>
+              <div>
+                <Label>Discount Type</Label>
+                <Select
+                  value={form.discountType}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, discountType: v, value: "" }))
+                  }
+                >
+                  <SelectTrigger
+                    className="mt-1"
+                    data-ocid="staff.coupon.type.select"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percent">Percentage (%)</SelectItem>
+                    <SelectItem value="fixed">Fixed Amount (£)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>
+                  Value ({form.discountType === "percent" ? "%" : "£"}) *
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max={form.discountType === "percent" ? "100" : undefined}
+                  step={form.discountType === "percent" ? "1" : "0.01"}
+                  value={form.value}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, value: e.target.value }))
+                  }
+                  placeholder={form.discountType === "percent" ? "20" : "5.00"}
+                  className="mt-1"
+                  data-ocid="staff.coupon.value.input"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={form.active}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, active: v }))}
+                  data-ocid="staff.coupon.active.switch"
+                />
+                <Label>{form.active ? "Active" : "Inactive"}</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                data-ocid="staff.coupon.cancel.button"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreate}
+                disabled={createCoupon.isPending}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                data-ocid="staff.coupon.save.button"
+              >
+                {createCoupon.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Create Coupon"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2" data-ocid="staff.coupon.loading_state">
+          {Array.from({ length: 3 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+            <Skeleton key={i} className="h-12 rounded" />
+          ))}
+        </div>
+      ) : !coupons || coupons.length === 0 ? (
+        <div
+          className="text-center py-12 text-muted-foreground"
+          data-ocid="staff.coupon.empty_state"
+        >
+          <Tag className="h-8 w-8 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No coupons yet.</p>
+        </div>
+      ) : (
+        <div
+          className="rounded-lg border border-border overflow-hidden"
+          data-ocid="staff.coupon.table"
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Code</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Value</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Toggle</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {coupons.map((coupon, i) => (
+                <TableRow
+                  key={coupon.id.toString()}
+                  data-ocid={`staff.coupon.row.${i + 1}`}
+                >
+                  <TableCell className="font-mono font-semibold">
+                    {coupon.code}
+                  </TableCell>
+                  <TableCell className="capitalize">
+                    {coupon.discountType}
+                  </TableCell>
+                  <TableCell>
+                    {coupon.discountType === "percent"
+                      ? `${coupon.value}%`
+                      : formatPrice(coupon.value)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={
+                        coupon.active
+                          ? "bg-green-100 text-green-800 border-green-200"
+                          : "bg-gray-100 text-gray-600 border-gray-200"
+                      }
+                    >
+                      {coupon.active ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Switch
+                      checked={coupon.active}
+                      onCheckedChange={() =>
+                        handleToggle(coupon.id, coupon.active)
+                      }
+                      data-ocid={`staff.coupon.toggle.${i + 1}`}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Payment Tab ────────────────────────────────────────────────────────────────
+function PaymentTab() {
+  const { data: paymentInfo } = usePaymentInfo();
+  const setPaymentInfo = useSetPaymentInfo();
+
+  const [method, setMethod] = useState("PayPal");
+  const [details, setDetails] = useState(
+    "Please send payment to payments@froststore.com via PayPal. Include your order number as the reference.",
+  );
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (paymentInfo && paymentInfo.length > 0) {
+      setMethod(paymentInfo[0].method);
+      setDetails(paymentInfo[0].details);
+    }
+  }, [paymentInfo]);
+
+  const handleSave = async () => {
+    try {
+      await setPaymentInfo.mutateAsync({ method, details });
+      setSaved(true);
+      toast.success("Payment info updated");
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      toast.error("Failed to update payment info");
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="font-display font-bold text-lg mb-4">Payment Info</h2>
+      <div className="crystal-card rounded-xl p-6 max-w-lg space-y-4">
+        <div>
+          <Label>Payment Method</Label>
+          <Input
+            value={method}
+            onChange={(e) => setMethod(e.target.value)}
+            placeholder="e.g. PayPal"
+            className="mt-1"
+            data-ocid="staff.payment.method.input"
+          />
+        </div>
+        <div>
+          <Label>Details / Instructions</Label>
+          <Textarea
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            placeholder="Payment instructions for customers…"
+            className="mt-1"
+            rows={4}
+            data-ocid="staff.payment.details.textarea"
+          />
+        </div>
+        <Button
+          onClick={handleSave}
+          disabled={setPaymentInfo.isPending}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+          data-ocid="staff.payment.save.button"
+        >
+          {setPaymentInfo.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : saved ? (
+            <>
+              <Check className="h-4 w-4 text-green-400" />
+              Saved!
+            </>
+          ) : (
+            "Save Payment Info"
+          )}
+        </Button>
+
+        {/* Current config */}
+        {paymentInfo && paymentInfo.length > 0 && (
+          <div className="pt-4 border-t border-border">
+            <p className="text-xs text-muted-foreground mb-2 font-semibold uppercase tracking-widest">
+              Current Configuration
+            </p>
+            {paymentInfo.map((info, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: payment info items have no stable id
+              <div key={i} className="p-3 rounded-lg bg-secondary text-sm">
+                <p className="font-semibold">{info.method}</p>
+                <p className="text-muted-foreground">{info.details}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Orders Tab ─────────────────────────────────────────────────────────────────
+function OrdersTab() {
+  const { data: orders, isLoading } = useAllOrders();
+  const updateStatus = useUpdateOrderStatus();
+
+  const handleStatusChange = async (id: bigint, status: string) => {
+    try {
+      await updateStatus.mutateAsync({ id, status });
+      toast.success("Order status updated");
+    } catch {
+      toast.error("Failed to update status");
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="font-display font-bold text-lg mb-4">All Orders</h2>
+
+      {isLoading ? (
+        <div className="space-y-2" data-ocid="staff.orders.loading_state">
+          {Array.from({ length: 4 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+            <Skeleton key={i} className="h-12 rounded" />
+          ))}
+        </div>
+      ) : !orders || orders.length === 0 ? (
+        <div
+          className="text-center py-12 text-muted-foreground"
+          data-ocid="staff.orders.empty_state"
+        >
+          <ShoppingBag className="h-8 w-8 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No orders yet.</p>
+        </div>
+      ) : (
+        <div
+          className="rounded-lg border border-border overflow-hidden"
+          data-ocid="staff.orders.table"
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Order ID</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Items</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {orders.map((order, i) => (
+                <TableRow
+                  key={order.id.toString()}
+                  data-ocid={`staff.order.row.${i + 1}`}
+                >
+                  <TableCell className="font-mono text-xs">
+                    #{order.id.toString()}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatDate(order.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {order.items.length} item
+                    {order.items.length !== 1 ? "s" : ""}
+                  </TableCell>
+                  <TableCell className="font-semibold">
+                    {formatPrice(order.total)}
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={order.status}
+                      onValueChange={(v) => handleStatusChange(order.id, v)}
+                    >
+                      <SelectTrigger
+                        className="h-8 text-xs w-36"
+                        data-ocid={`staff.order.status.select.${i + 1}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((s) => (
+                          <SelectItem
+                            key={s}
+                            value={s}
+                            className="capitalize text-xs"
+                          >
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Gift Cards Tab ─────────────────────────────────────────────────────────────
+function GiftCardsTab() {
+  const createGiftCard = useCreateGiftCard();
+  const [form, setForm] = useState({ code: "", balance: "" });
+  const [issued, setIssued] = useState<
+    Array<{ code: string; balance: string }>
+  >(() => {
+    try {
+      const stored = localStorage.getItem("frost_issued_gift_cards");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const generateCode = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const segment = () =>
+      Array.from(
+        { length: 4 },
+        () => chars[Math.floor(Math.random() * chars.length)],
+      ).join("");
+    return `FROST-${segment()}-${segment()}`;
+  };
+
+  const handleCreate = async () => {
+    if (!form.balance) return;
+    const code = form.code.trim().toUpperCase() || generateCode();
+    const balance = BigInt(Math.round(Number.parseFloat(form.balance) * 100));
+    try {
+      await createGiftCard.mutateAsync({ code, balance });
+      const newEntry = {
+        code,
+        balance: `£${Number.parseFloat(form.balance).toFixed(2)}`,
+      };
+      const updated = [newEntry, ...issued];
+      setIssued(updated);
+      localStorage.setItem("frost_issued_gift_cards", JSON.stringify(updated));
+      toast.success(`Gift card ${code} created`);
+      setForm({ code: "", balance: "" });
+      setDialogOpen(false);
+    } catch {
+      toast.error("Failed to create gift card");
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-display font-bold text-lg">Gift Cards</h2>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-9"
+              data-ocid="staff.giftcard.open_modal_button"
+            >
+              <Plus className="h-4 w-4" />
+              Create Gift Card
+            </Button>
+          </DialogTrigger>
+          <DialogContent data-ocid="staff.giftcard.dialog">
+            <DialogHeader>
+              <DialogTitle>Create Gift Card</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <Label>Code (auto-generated if empty)</Label>
+                <Input
+                  value={form.code}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      code: e.target.value.toUpperCase(),
+                    }))
+                  }
+                  placeholder="FROST-XXXX-XXXX"
+                  className="mt-1 font-mono"
+                  data-ocid="staff.giftcard.code.input"
+                />
+              </div>
+              <div>
+                <Label>Balance (£) *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={form.balance}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, balance: e.target.value }))
+                  }
+                  placeholder="25.00"
+                  className="mt-1"
+                  data-ocid="staff.giftcard.balance.input"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                data-ocid="staff.giftcard.cancel.button"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreate}
+                disabled={createGiftCard.isPending || !form.balance}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                data-ocid="staff.giftcard.save.button"
+              >
+                {createGiftCard.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Create"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {issued.length === 0 ? (
+        <div
+          className="text-center py-12 text-muted-foreground"
+          data-ocid="staff.giftcard.empty_state"
+        >
+          <Gift className="h-8 w-8 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No gift cards issued yet.</p>
+        </div>
+      ) : (
+        <div
+          className="rounded-lg border border-border overflow-hidden"
+          data-ocid="staff.giftcard.table"
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Code</TableHead>
+                <TableHead>Balance</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {issued.map((card, i) => (
+                <TableRow
+                  key={card.code}
+                  data-ocid={`staff.giftcard.row.${i + 1}`}
+                >
+                  <TableCell className="font-mono text-sm">
+                    {card.code}
+                  </TableCell>
+                  <TableCell className="font-semibold">
+                    {card.balance}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main StaffPage ─────────────────────────────────────────────────────────────
+export function StaffPage() {
+  const [authenticated, setAuthenticated] = useState(
+    () => sessionStorage.getItem(STAFF_SESSION_KEY) === "true",
+  );
+
+  if (!authenticated) {
+    return <StaffLogin onSuccess={() => setAuthenticated(true)} />;
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">
+            Staff Panel
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Manage your Frost store
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            sessionStorage.removeItem(STAFF_SESSION_KEY);
+            setAuthenticated(false);
+          }}
+          className="text-muted-foreground"
+          data-ocid="staff.logout.button"
+        >
+          <Lock className="h-4 w-4 mr-2" />
+          Lock Panel
+        </Button>
+      </div>
+
+      <Tabs defaultValue="products">
+        <TabsList className="mb-6 bg-secondary flex-wrap h-auto gap-1">
+          <TabsTrigger
+            value="products"
+            className="gap-2"
+            data-ocid="staff.products.tab"
+          >
+            <Package className="h-4 w-4" />
+            Products
+          </TabsTrigger>
+          <TabsTrigger
+            value="categories"
+            className="gap-2"
+            data-ocid="staff.categories.tab"
+          >
+            <Grid3X3 className="h-4 w-4" />
+            Categories
+          </TabsTrigger>
+          <TabsTrigger
+            value="coupons"
+            className="gap-2"
+            data-ocid="staff.coupons.tab"
+          >
+            <Tag className="h-4 w-4" />
+            Coupons
+          </TabsTrigger>
+          <TabsTrigger
+            value="payment"
+            className="gap-2"
+            data-ocid="staff.payment.tab"
+          >
+            <CreditCard className="h-4 w-4" />
+            Payment
+          </TabsTrigger>
+          <TabsTrigger
+            value="orders"
+            className="gap-2"
+            data-ocid="staff.orders.tab"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            Orders
+          </TabsTrigger>
+          <TabsTrigger
+            value="giftcards"
+            className="gap-2"
+            data-ocid="staff.giftcards.tab"
+          >
+            <Gift className="h-4 w-4" />
+            Gift Cards
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="crystal-card rounded-xl p-6">
+          <TabsContent value="products">
+            <ProductsTab />
+          </TabsContent>
+          <TabsContent value="categories">
+            <CategoriesTab />
+          </TabsContent>
+          <TabsContent value="coupons">
+            <CouponsTab />
+          </TabsContent>
+          <TabsContent value="payment">
+            <PaymentTab />
+          </TabsContent>
+          <TabsContent value="orders">
+            <OrdersTab />
+          </TabsContent>
+          <TabsContent value="giftcards">
+            <GiftCardsTab />
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  );
+}

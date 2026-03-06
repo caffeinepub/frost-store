@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Frost Store — Design Tokens ─── */
+/* Fonts: Cabinet Grotesk (display) + General Sans (body) */
+
+@font-face {
+  font-family: "Cabinet Grotesk";
+  src: url("/assets/fonts/CabinetGrotesk-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "General Sans";
+  src: url("/assets/fonts/GeneralSans-Variable.woff2") format("woff2");
+  font-weight: 200 700;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+
+    /* Frost palette — icy whites, deep navy, crystalline accent */
+    --background: 0.98 0.005 240;
+    --foreground: 0.12 0.025 250;
+    --card: 1 0 0;
+    --card-foreground: 0.12 0.025 250;
+    --popover: 1 0 0;
+    --popover-foreground: 0.12 0.025 250;
+
+    /* Primary: deep slate-navy */
+    --primary: 0.18 0.04 255;
+    --primary-foreground: 0.98 0.003 220;
+
+    /* Secondary: pale icy blue */
+    --secondary: 0.94 0.012 230;
+    --secondary-foreground: 0.22 0.04 250;
+
+    /* Muted: cool light grey */
+    --muted: 0.95 0.008 230;
+    --muted-foreground: 0.48 0.02 240;
+
+    /* Accent: crystalline cyan-blue */
+    --accent: 0.62 0.14 218;
+    --accent-foreground: 1 0 0;
+
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+
+    --border: 0.88 0.012 230;
+    --input: 0.9 0.01 230;
+    --ring: 0.62 0.14 218;
+
+    /* Frost-specific */
+    --frost-navy: 0.16 0.05 258;
+    --frost-ice: 0.96 0.018 220;
+    --frost-crystal: 0.62 0.14 218;
+    --frost-snow: 0.99 0.003 220;
+
+    --chart-1: 0.62 0.14 218;
+    --chart-2: 0.52 0.18 248;
+    --chart-3: 0.72 0.10 200;
+    --chart-4: 0.45 0.12 265;
+    --chart-5: 0.78 0.08 215;
+
+    --sidebar: 0.16 0.05 258;
+    --sidebar-foreground: 0.92 0.015 220;
+    --sidebar-primary: 0.62 0.14 218;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.22 0.06 258;
+    --sidebar-accent-foreground: 0.92 0.015 220;
+    --sidebar-border: 0.28 0.06 258;
+    --sidebar-ring: 0.62 0.14 218;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "General Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Cabinet Grotesk", sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .frost-glass {
+    background: oklch(1 0 0 / 0.7);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid oklch(0.88 0.012 230 / 0.5);
+  }
+
+  .frost-nav {
+    background: oklch(0.16 0.05 258 / 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .frost-gradient {
+    background: linear-gradient(
+      135deg,
+      oklch(0.16 0.05 258) 0%,
+      oklch(0.22 0.07 255) 50%,
+      oklch(0.18 0.06 265) 100%
+    );
+  }
+
+  .crystal-card {
+    background: oklch(1 0 0);
+    border: 1px solid oklch(0.88 0.012 230);
+    box-shadow: 0 1px 3px oklch(0.12 0.025 250 / 0.06),
+                0 8px 24px oklch(0.62 0.14 218 / 0.06);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .crystal-card:hover {
+    box-shadow: 0 4px 16px oklch(0.12 0.025 250 / 0.1),
+                0 16px 40px oklch(0.62 0.14 218 / 0.12);
+    transform: translateY(-2px);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, oklch(0.16 0.05 258), oklch(0.62 0.14 218));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
