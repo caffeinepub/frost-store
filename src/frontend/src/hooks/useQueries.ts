@@ -269,8 +269,16 @@ export function useSaveUserProfile() {
 export function useVerifyStaffCode() {
   const { actor } = useActor();
   return useMutation({
-    mutationFn: (code: string) => actor!.verifyStaffCode(code),
+    mutationFn: async (code: string) => {
+      if (!actor) throw new Error("Not ready yet, please try again");
+      return actor.verifyStaffCode(code);
+    },
   });
+}
+
+export function useIsActorReady() {
+  const { actor, isFetching } = useActor();
+  return !!actor && !isFetching;
 }
 
 // ── Gift Cards (admin list) ───────────────────────────────────────────────────

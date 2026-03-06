@@ -55,6 +55,7 @@ import {
   useCreateProduct,
   useDeleteCategory,
   useDeleteProduct,
+  useIsActorReady,
   usePaymentInfo,
   useProducts,
   useSetPaymentInfo,
@@ -129,6 +130,7 @@ function StaffLogin({
   const [code, setCode] = useState("");
   const [showCode, setShowCode] = useState(false);
   const verify = useVerifyStaffCode();
+  const actorReady = useIsActorReady();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,10 +199,15 @@ function StaffLogin({
           <Button
             type="submit"
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11"
-            disabled={verify.isPending || !code}
+            disabled={verify.isPending || !code || !actorReady}
             data-ocid="staff.login.button"
           >
-            {verify.isPending ? (
+            {!actorReady ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Loading…
+              </>
+            ) : verify.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Verifying…
