@@ -14,7 +14,7 @@ export function Footer() {
             <div className="flex items-center gap-2 mb-3">
               <Leaf className="h-5 w-5 text-white/80" strokeWidth={1.5} />
               <span className="font-display text-lg font-bold text-white">
-                Frost
+                Gardening World
               </span>
             </div>
             <p className="text-white/60 text-sm leading-relaxed max-w-xs">
@@ -83,7 +83,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-white/10 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
-          <p>© {year} Frost. All rights reserved.</p>
+          <p>© {year} Gardening World. All rights reserved.</p>
           <p className="flex items-center gap-1">
             Built with{" "}
             <Heart

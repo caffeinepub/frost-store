@@ -55,7 +55,7 @@ export function HomePage() {
       >
         <img
           src="/assets/generated/frost-hero.dim_1600x600.jpg"
-          alt="Frost Store"
+          alt="Gardening World"
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 hero-gradient" />

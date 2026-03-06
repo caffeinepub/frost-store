@@ -28,7 +28,7 @@ export function Navbar() {
         >
           <Leaf className="h-6 w-6 text-primary" strokeWidth={1.5} />
           <span className="font-display text-xl font-bold tracking-tight text-primary">
-            Frost
+            Gardening World
           </span>
         </Link>
 

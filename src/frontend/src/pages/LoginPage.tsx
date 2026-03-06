@@ -32,7 +32,7 @@ export function LoginPage() {
             Welcome back
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Sign in to your Frost account
+            Sign in to your Gardening World account
           </p>
         </div>
 
@@ -59,7 +59,7 @@ export function LoginPage() {
             </Button>
 
             <p className="text-xs text-muted-foreground text-center leading-relaxed">
-              Frost uses Internet Identity — a secure, password-free
+              Gardening World uses Internet Identity — a secure, password-free
               authentication system.
             </p>
           </div>
@@ -70,7 +70,7 @@ export function LoginPage() {
             </div>
             <div className="relative flex justify-center text-xs">
               <span className="bg-card px-2 text-muted-foreground">
-                New to Frost?
+                New to Gardening World?
               </span>
             </div>
           </div>

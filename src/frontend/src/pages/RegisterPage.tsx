@@ -39,7 +39,7 @@ export function RegisterPage() {
             Create your account
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Join Frost for a premium shopping experience
+            Join Gardening World for a premium shopping experience
           </p>
         </div>
 
