@@ -277,8 +277,10 @@ export function useVerifyStaffCode() {
 }
 
 export function useIsActorReady() {
-  const { actor, isFetching } = useActor();
-  return !!actor && !isFetching;
+  const { actor } = useActor();
+  // Consider ready as long as we have an actor (even if refetching a new one).
+  // isFetching can be true momentarily after II login which would wrongly block the button.
+  return !!actor;
 }
 
 // ── Gift Cards (admin list) ───────────────────────────────────────────────────

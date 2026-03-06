@@ -130,25 +130,30 @@ function StaffLogin({
 }) {
   const [code, setCode] = useState("");
   const [showCode, setShowCode] = useState(false);
-  const [step, setStep] = useState<"login" | "code">("login");
+  const [step, setStep] = useState<"login" | "code" | "waiting">("login");
+  const [verifying, setVerifying] = useState(false);
   const verify = useVerifyStaffCode();
   const actorReady = useIsActorReady();
   const { isLoggedIn, isInitializing, isLoggingIn, login } = useAuth();
 
-  // Once user logs in, move to code step
+  // After login, wait for the actor to be ready before showing code form
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && step === "login") {
+      setStep("waiting");
+    }
+  }, [isLoggedIn, step]);
+
+  // Transition from waiting → code once the actor is ready
+  useEffect(() => {
+    if (step === "waiting" && actorReady) {
       setStep("code");
     }
-  }, [isLoggedIn]);
+  }, [step, actorReady]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code) return;
-    if (!actorReady) {
-      toast.error("Still connecting — please wait a moment and try again");
-      return;
-    }
+    if (!code || verifying) return;
+    setVerifying(true);
     try {
       const ok = await verify.mutateAsync(code);
       if (ok) {
@@ -164,6 +169,8 @@ function StaffLogin({
           ? "Still connecting to the network — please wait a moment and try again"
           : "Verification failed — please try again",
       );
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -180,13 +187,15 @@ function StaffLogin({
           </div>
           <h1 className="font-display text-2xl font-bold">Staff Panel</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {step === "login"
-              ? "Sign in with Internet Identity to continue"
-              : "Enter your staff code to unlock the panel"}
+            {step === "code"
+              ? "Enter your staff code to unlock the panel"
+              : step === "waiting"
+                ? "Connecting to network…"
+                : "Sign in with Internet Identity to continue"}
           </p>
         </div>
 
-        {step === "login" ? (
+        {step === "login" && (
           <div className="crystal-card rounded-2xl p-8 space-y-4">
             <p className="text-sm text-muted-foreground text-center">
               Staff must sign in before entering their access code.
@@ -210,7 +219,18 @@ function StaffLogin({
               )}
             </Button>
           </div>
-        ) : (
+        )}
+
+        {step === "waiting" && (
+          <div className="crystal-card rounded-2xl p-8 flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground text-center">
+              Setting up your secure session, please wait…
+            </p>
+          </div>
+        )}
+
+        {step === "code" && (
           <form
             onSubmit={handleSubmit}
             className="crystal-card rounded-2xl p-8 space-y-4"
@@ -246,15 +266,10 @@ function StaffLogin({
             <Button
               type="submit"
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11"
-              disabled={verify.isPending || !code || !actorReady}
+              disabled={verifying || !code}
               data-ocid="staff.login.button"
             >
-              {!actorReady ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Connecting…
-                </>
-              ) : verify.isPending ? (
+              {verifying ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Verifying…
