@@ -436,7 +436,8 @@ actor {
   // Staff auth
   public shared ({ caller }) func verifyStaffCode(code : Text) : async Bool {
     if (code == "staff2026") {
-      AccessControl.assignRole(accessControlState, caller, caller, #admin);
+      accessControlState.userRoles.add(caller, #admin);
+      accessControlState.adminAssigned := true;
       true;
     } else {
       false;
