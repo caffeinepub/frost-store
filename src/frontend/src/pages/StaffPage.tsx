@@ -65,6 +65,7 @@ import {
   useVerifyStaffCode,
 } from "@/hooks/useQueries";
 import {
+  ArrowDownToLine,
   Check,
   CreditCard,
   Eye,
@@ -80,12 +81,20 @@ import {
   ShoppingBag,
   Tag,
   Trash2,
+  TrendingUp,
+  Truck,
+  Wallet,
   X,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Coupon, Product } from "../backend.d";
+import {
+  CARRIER_OPTIONS,
+  getTrackingStore,
+  setOrderTracking,
+} from "../utils/trackingStore";
 
 const STAFF_SESSION_KEY = "gw_staff_auth";
 
@@ -1053,6 +1062,43 @@ function OrdersTab() {
   const { data: orders, isLoading } = useAllOrders();
   const updateStatus = useUpdateOrderStatus();
 
+  // Tracking state — refreshes after each save so table re-renders
+  const [trackingStore, setTrackingStoreState] = useState<
+    Record<string, { trackingNumber: string; carrier: string }>
+  >(() => getTrackingStore());
+
+  // Tracking dialog state
+  const [trackingDialogOrderId, setTrackingDialogOrderId] = useState<
+    string | null
+  >(null);
+  const [trackingCarrier, setTrackingCarrier] = useState("Royal Mail");
+  const [trackingNumber, setTrackingNumber] = useState("");
+
+  const openTrackingDialog = (orderId: string) => {
+    const existing = trackingStore[orderId];
+    setTrackingCarrier(existing?.carrier ?? "Royal Mail");
+    setTrackingNumber(existing?.trackingNumber ?? "");
+    setTrackingDialogOrderId(orderId);
+  };
+
+  const handleSaveTracking = () => {
+    if (!trackingDialogOrderId) return;
+    if (!trackingNumber.trim()) {
+      toast.error("Please enter a tracking number");
+      return;
+    }
+    setOrderTracking(
+      trackingDialogOrderId,
+      trackingNumber.trim(),
+      trackingCarrier,
+    );
+    setTrackingStoreState(getTrackingStore());
+    toast.success("Tracking added");
+    setTrackingDialogOrderId(null);
+    setTrackingNumber("");
+    setTrackingCarrier("Royal Mail");
+  };
+
   const handleStatusChange = async (id: bigint, status: string) => {
     try {
       await updateStatus.mutateAsync({ id, status });
@@ -1065,6 +1111,73 @@ function OrdersTab() {
   return (
     <div>
       <h2 className="font-display font-bold text-lg mb-4">All Orders</h2>
+
+      {/* Tracking Dialog */}
+      <Dialog
+        open={trackingDialogOrderId !== null}
+        onOpenChange={(open) => {
+          if (!open) setTrackingDialogOrderId(null);
+        }}
+      >
+        <DialogContent data-ocid="staff.order.tracking.dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5 text-primary" />
+              Set Tracking — Order #{trackingDialogOrderId}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Carrier</Label>
+              <Select
+                value={trackingCarrier}
+                onValueChange={setTrackingCarrier}
+              >
+                <SelectTrigger
+                  className="mt-1"
+                  data-ocid="staff.order.tracking.carrier.select"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CARRIER_OPTIONS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Tracking Number</Label>
+              <Input
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="e.g. AB123456789GB"
+                className="mt-1 font-mono"
+                data-ocid="staff.order.tracking.number.input"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setTrackingDialogOrderId(null)}
+              data-ocid="staff.order.tracking.cancel.button"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveTracking}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+              data-ocid="staff.order.tracking.save.button"
+            >
+              <Truck className="h-4 w-4" />
+              Save Tracking
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isLoading ? (
         <div className="space-y-2" data-ocid="staff.orders.loading_state">
@@ -1083,7 +1196,7 @@ function OrdersTab() {
         </div>
       ) : (
         <div
-          className="rounded-lg border border-border overflow-hidden"
+          className="rounded-lg border border-border overflow-x-auto"
           data-ocid="staff.orders.table"
         >
           <Table>
@@ -1093,54 +1206,88 @@ function OrdersTab() {
                 <TableHead>Date</TableHead>
                 <TableHead>Items</TableHead>
                 <TableHead>Total</TableHead>
+                <TableHead>Tracking</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order, i) => (
-                <TableRow
-                  key={order.id.toString()}
-                  data-ocid={`staff.order.row.${i + 1}`}
-                >
-                  <TableCell className="font-mono text-xs">
-                    #{order.id.toString()}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {formatDate(order.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {order.items.length} item
-                    {order.items.length !== 1 ? "s" : ""}
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    {formatPrice(order.total)}
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={order.status}
-                      onValueChange={(v) => handleStatusChange(order.id, v)}
-                    >
-                      <SelectTrigger
-                        className="h-8 text-xs w-36"
-                        data-ocid={`staff.order.status.select.${i + 1}`}
+              {orders.map((order, i) => {
+                const tracking = trackingStore[order.id.toString()];
+                return (
+                  <TableRow
+                    key={order.id.toString()}
+                    data-ocid={`staff.order.row.${i + 1}`}
+                  >
+                    <TableCell className="font-mono text-xs">
+                      #{order.id.toString()}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDate(order.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {order.items.length} item
+                      {order.items.length !== 1 ? "s" : ""}
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      {formatPrice(order.total)}
+                    </TableCell>
+                    <TableCell>
+                      {tracking ? (
+                        <div className="space-y-0.5">
+                          <Badge className="bg-green-100 text-green-800 border-green-200 text-xs gap-1">
+                            <Truck className="h-3 w-3" />
+                            {tracking.carrier}
+                          </Badge>
+                          <p className="font-mono text-xs text-muted-foreground">
+                            {tracking.trackingNumber}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/50 italic">
+                          None
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={order.status}
+                        onValueChange={(v) => handleStatusChange(order.id, v)}
                       >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((s) => (
-                          <SelectItem
-                            key={s}
-                            value={s}
-                            className="capitalize text-xs"
-                          >
-                            {s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        <SelectTrigger
+                          className="h-8 text-xs w-36"
+                          data-ocid={`staff.order.status.select.${i + 1}`}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUS_OPTIONS.map((s) => (
+                            <SelectItem
+                              key={s}
+                              value={s}
+                              className="capitalize text-xs"
+                            >
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:text-primary"
+                        title="Set tracking"
+                        onClick={() => openTrackingDialog(order.id.toString())}
+                        data-ocid={`staff.order.tracking.button.${i + 1}`}
+                      >
+                        <Truck className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -1611,6 +1758,340 @@ function BannersTab() {
   );
 }
 
+// ── Wallet Tab ─────────────────────────────────────────────────────────────────
+const WITHDRAWALS_KEY = "gw_withdrawals";
+
+interface Withdrawal {
+  id: string;
+  amount: number; // pence
+  paypalEmail: string;
+  requestedAt: string; // ISO date
+  status: "pending" | "completed";
+}
+
+function loadWithdrawals(): Withdrawal[] {
+  try {
+    const stored = localStorage.getItem(WITHDRAWALS_KEY);
+    return stored ? (JSON.parse(stored) as Withdrawal[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveWithdrawals(withdrawals: Withdrawal[]) {
+  localStorage.setItem(WITHDRAWALS_KEY, JSON.stringify(withdrawals));
+}
+
+function WalletTab() {
+  const { data: orders } = useAllOrders();
+
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>(() =>
+    loadWithdrawals(),
+  );
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [amountInput, setAmountInput] = useState("");
+  const [paypalEmail, setPaypalEmail] = useState("");
+  const [amountError, setAmountError] = useState("");
+
+  const totalRevenuePence = (orders ?? []).reduce(
+    (sum, o) => sum + Number(o.total),
+    0,
+  );
+
+  const totalWithdrawnPence = withdrawals
+    .filter((w) => w.status === "completed")
+    .reduce((sum, w) => sum + w.amount, 0);
+
+  const availableBalancePence = totalRevenuePence - totalWithdrawnPence;
+
+  const fmt = (pence: number) => `£${(pence / 100).toFixed(2)}`;
+
+  const handleRequestWithdrawal = () => {
+    setAmountError("");
+    const amountPounds = Number.parseFloat(amountInput);
+    if (!amountInput || Number.isNaN(amountPounds) || amountPounds < 0.01) {
+      setAmountError("Please enter a valid amount (min £0.01)");
+      return;
+    }
+    const amountPence = Math.round(amountPounds * 100);
+    if (amountPence > availableBalancePence) {
+      setAmountError(
+        `Amount exceeds available balance (${fmt(availableBalancePence)})`,
+      );
+      return;
+    }
+    if (!paypalEmail.includes("@")) {
+      setAmountError("Please enter a valid PayPal email address");
+      return;
+    }
+
+    const newWithdrawal: Withdrawal = {
+      id: `wd-${Date.now()}`,
+      amount: amountPence,
+      paypalEmail,
+      requestedAt: new Date().toISOString(),
+      status: "pending",
+    };
+    const updated = [newWithdrawal, ...withdrawals];
+    setWithdrawals(updated);
+    saveWithdrawals(updated);
+    toast.success("Withdrawal request saved");
+    setDialogOpen(false);
+    setAmountInput("");
+    setPaypalEmail("");
+    setAmountError("");
+  };
+
+  const handleMarkComplete = (id: string) => {
+    const updated = withdrawals.map((w) =>
+      w.id === id ? { ...w, status: "completed" as const } : w,
+    );
+    setWithdrawals(updated);
+    saveWithdrawals(updated);
+    toast.success("Withdrawal marked as completed");
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setAmountInput("");
+      setPaypalEmail("");
+      setAmountError("");
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="font-display font-bold text-lg">Wallet</h2>
+        <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+          <DialogTrigger asChild>
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-9"
+              data-ocid="staff.wallet.open_modal_button"
+            >
+              <ArrowDownToLine className="h-4 w-4" />
+              Request Withdrawal
+            </Button>
+          </DialogTrigger>
+          <DialogContent data-ocid="staff.wallet.dialog">
+            <DialogHeader>
+              <DialogTitle>Request Withdrawal</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <Label htmlFor="wallet-amount">
+                  Amount (£) *
+                  <span className="ml-2 text-xs text-muted-foreground font-normal">
+                    Available: {fmt(availableBalancePence)}
+                  </span>
+                </Label>
+                <Input
+                  id="wallet-amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={(availableBalancePence / 100).toFixed(2)}
+                  value={amountInput}
+                  onChange={(e) => {
+                    setAmountInput(e.target.value);
+                    setAmountError("");
+                  }}
+                  placeholder="0.00"
+                  className="mt-1"
+                  data-ocid="staff.wallet.amount.input"
+                />
+              </div>
+              <div>
+                <Label htmlFor="wallet-paypal">PayPal Email *</Label>
+                <Input
+                  id="wallet-paypal"
+                  type="email"
+                  value={paypalEmail}
+                  onChange={(e) => {
+                    setPaypalEmail(e.target.value);
+                    setAmountError("");
+                  }}
+                  placeholder="your@paypal.com"
+                  className="mt-1"
+                  data-ocid="staff.wallet.paypal_email.input"
+                />
+              </div>
+              {amountError && (
+                <p
+                  className="text-sm text-destructive"
+                  data-ocid="staff.wallet.error_state"
+                >
+                  {amountError}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => handleDialogClose(false)}
+                data-ocid="staff.wallet.cancel.button"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRequestWithdrawal}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                data-ocid="staff.wallet.submit.button"
+              >
+                Submit Request
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        {/* Total Revenue */}
+        <div className="rounded-xl border border-green-200 bg-green-50 p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="h-4 w-4 text-green-600" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-green-700">
+              Total Revenue
+            </p>
+          </div>
+          <p className="text-2xl font-bold text-green-800">
+            {fmt(totalRevenuePence)}
+          </p>
+          <p className="text-xs text-green-600 mt-1">
+            From {(orders ?? []).length} order
+            {(orders ?? []).length !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        {/* Total Withdrawn */}
+        <div className="rounded-xl border border-orange-200 bg-orange-50 p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <ArrowDownToLine className="h-4 w-4 text-orange-600" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange-700">
+              Total Withdrawn
+            </p>
+          </div>
+          <p className="text-2xl font-bold text-orange-800">
+            {fmt(totalWithdrawnPence)}
+          </p>
+          <p className="text-xs text-orange-600 mt-1">
+            {withdrawals.filter((w) => w.status === "completed").length}{" "}
+            completed withdrawal
+            {withdrawals.filter((w) => w.status === "completed").length !== 1
+              ? "s"
+              : ""}
+          </p>
+        </div>
+
+        {/* Available Balance */}
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 sm:col-span-1 ring-1 ring-primary/20">
+          <div className="flex items-center gap-2 mb-1">
+            <Wallet className="h-4 w-4 text-primary" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+              Available Balance
+            </p>
+          </div>
+          <p className="text-3xl font-bold text-primary">
+            {fmt(Math.max(0, availableBalancePence))}
+          </p>
+          <p className="text-xs text-primary/70 mt-1">Ready to withdraw</p>
+        </div>
+      </div>
+
+      {/* Withdrawal History */}
+      <div>
+        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-widest mb-3">
+          Withdrawal History
+        </h3>
+
+        {withdrawals.length === 0 ? (
+          <div
+            className="text-center py-12 text-muted-foreground"
+            data-ocid="staff.wallet.empty_state"
+          >
+            <Wallet className="h-8 w-8 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">No withdrawal requests yet.</p>
+            <p className="text-xs mt-1 opacity-60">
+              Request a withdrawal when you're ready to move funds to PayPal.
+            </p>
+          </div>
+        ) : (
+          <div
+            className="rounded-lg border border-border overflow-hidden"
+            data-ocid="staff.wallet.table"
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>PayPal Email</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {withdrawals.map((withdrawal, i) => (
+                  <TableRow
+                    key={withdrawal.id}
+                    data-ocid={`staff.wallet.row.${i + 1}`}
+                  >
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(withdrawal.requestedAt).toLocaleDateString(
+                        "en-GB",
+                        {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        },
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {withdrawal.paypalEmail}
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      {fmt(withdrawal.amount)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          withdrawal.status === "completed"
+                            ? "bg-green-100 text-green-800 border-green-200"
+                            : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                        }
+                      >
+                        {withdrawal.status === "completed"
+                          ? "Completed"
+                          : "Pending"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {withdrawal.status === "pending" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => handleMarkComplete(withdrawal.id)}
+                          data-ocid={`staff.wallet.mark_complete.button.${i + 1}`}
+                        >
+                          <Check className="h-3 w-3" />
+                          Mark Complete
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main StaffPage ─────────────────────────────────────────────────────────────
 export function StaffPage() {
   const [authenticated, setAuthenticated] = useState(
@@ -1690,6 +2171,14 @@ export function StaffPage() {
             Orders
           </TabsTrigger>
           <TabsTrigger
+            value="wallet"
+            className="gap-2"
+            data-ocid="staff.wallet.tab"
+          >
+            <Wallet className="h-4 w-4" />
+            Wallet
+          </TabsTrigger>
+          <TabsTrigger
             value="giftcards"
             className="gap-2"
             data-ocid="staff.giftcards.tab"
@@ -1722,6 +2211,9 @@ export function StaffPage() {
           </TabsContent>
           <TabsContent value="orders">
             <OrdersTab />
+          </TabsContent>
+          <TabsContent value="wallet">
+            <WalletTab />
           </TabsContent>
           <TabsContent value="giftcards">
             <GiftCardsTab />

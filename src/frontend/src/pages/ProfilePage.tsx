@@ -16,18 +16,22 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   CheckCircle,
   ChevronDown,
+  Copy,
+  ExternalLink,
   Gift,
   Loader2,
   LogOut,
   MapPin,
   Package,
   Save,
+  Truck,
   User,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Address } from "../backend.d";
+import { getOrderTracking, getTrackingUrl } from "../utils/trackingStore";
 
 function formatPrice(pence: bigint): string {
   return `£${(Number(pence) / 100).toFixed(2)}`;
@@ -302,6 +306,107 @@ export function ProfilePage() {
                           <span>{formatPrice(order.total)}</span>
                         </div>
                       </div>
+
+                      {/* Tracking Section */}
+                      {(() => {
+                        const tracking = getOrderTracking(order.id.toString());
+                        if (!tracking) return null;
+                        const trackingUrl = getTrackingUrl(
+                          tracking.carrier,
+                          tracking.trackingNumber,
+                        );
+                        return (
+                          <div
+                            className="mt-4 rounded-xl bg-green-50 border border-green-200 p-4"
+                            data-ocid={`profile.order.tracking.${i + 1}`}
+                          >
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="h-8 w-8 rounded-lg bg-green-600 flex items-center justify-center shrink-0">
+                                <Truck className="h-4 w-4 text-white" />
+                              </div>
+                              <h4 className="font-semibold text-sm text-green-900">
+                                Track Your Package
+                              </h4>
+                            </div>
+
+                            <div className="space-y-3">
+                              {/* Carrier */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-green-700 font-medium">
+                                  Carrier:
+                                </span>
+                                <Badge className="bg-green-700 text-white border-transparent text-xs gap-1">
+                                  <Truck className="h-3 w-3" />
+                                  {tracking.carrier}
+                                </Badge>
+                              </div>
+
+                              {/* Tracking number */}
+                              <div>
+                                <span className="text-xs text-green-700 font-medium block mb-1">
+                                  Tracking Number:
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <code className="flex-1 bg-white border border-green-200 rounded-lg px-3 py-2 text-sm font-mono text-green-900 select-all">
+                                    {tracking.trackingNumber}
+                                  </code>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-9 w-9 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-900 shrink-0"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(
+                                        tracking.trackingNumber,
+                                      );
+                                      toast.success("Tracking number copied!");
+                                    }}
+                                    data-ocid="profile.order.tracking.copy.button"
+                                    title="Copy tracking number"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Open on carrier site */}
+                              {trackingUrl && (
+                                <Button
+                                  className="w-full bg-green-700 hover:bg-green-800 text-white gap-2 h-10"
+                                  onClick={() =>
+                                    window.open(
+                                      trackingUrl,
+                                      "_blank",
+                                      "noopener,noreferrer",
+                                    )
+                                  }
+                                  data-ocid="profile.order.tracking.open.button"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                  Track on {tracking.carrier} Website
+                                </Button>
+                              )}
+
+                              {/* Embedded iframe */}
+                              {trackingUrl && (
+                                <div className="mt-2">
+                                  <iframe
+                                    src={trackingUrl}
+                                    width="100%"
+                                    height="400"
+                                    className="rounded-lg border border-green-200 mt-3 bg-white"
+                                    title="Package Tracking"
+                                  />
+                                  <p className="text-xs text-green-700/70 mt-2 text-center">
+                                    If the tracking page doesn't load in the
+                                    frame, use the button above to open it
+                                    directly.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </motion.div>
