@@ -1,4 +1,9 @@
 import {
+  type PromoBanner,
+  loadPromoBanners,
+  savePromoBanners,
+} from "@/components/PromoBanners";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -68,6 +73,7 @@ import {
   Grid3X3,
   Loader2,
   Lock,
+  Megaphone,
   Package,
   Pencil,
   Plus,
@@ -81,7 +87,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Coupon, Product } from "../backend.d";
 
-const STAFF_SESSION_KEY = "frost_staff_auth";
+const STAFF_SESSION_KEY = "gw_staff_auth";
 
 function formatPrice(pence: bigint): string {
   return `£${(Number(pence) / 100).toFixed(2)}`;
@@ -796,7 +802,7 @@ function CouponsTab() {
                       code: e.target.value.toUpperCase(),
                     }))
                   }
-                  placeholder="FROST20"
+                  placeholder="GARDEN20"
                   className="mt-1 font-mono"
                   data-ocid="staff.coupon.code.input"
                 />
@@ -957,7 +963,7 @@ function PaymentTab() {
 
   const [method, setMethod] = useState("PayPal");
   const [details, setDetails] = useState(
-    "Please send payment to payments@froststore.com via PayPal. Include your order number as the reference.",
+    "Please send payment to payments@gardeningworld.com via PayPal. Include your order number as the reference.",
   );
   const [saved, setSaved] = useState(false);
 
@@ -1151,7 +1157,7 @@ function GiftCardsTab() {
     Array<{ code: string; balance: string }>
   >(() => {
     try {
-      const stored = localStorage.getItem("frost_issued_gift_cards");
+      const stored = localStorage.getItem("gw_issued_gift_cards");
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -1166,7 +1172,7 @@ function GiftCardsTab() {
         { length: 4 },
         () => chars[Math.floor(Math.random() * chars.length)],
       ).join("");
-    return `FROST-${segment()}-${segment()}`;
+    return `GW-${segment()}-${segment()}`;
   };
 
   const handleCreate = async () => {
@@ -1181,7 +1187,7 @@ function GiftCardsTab() {
       };
       const updated = [newEntry, ...issued];
       setIssued(updated);
-      localStorage.setItem("frost_issued_gift_cards", JSON.stringify(updated));
+      localStorage.setItem("gw_issued_gift_cards", JSON.stringify(updated));
       toast.success(`Gift card ${code} created`);
       setForm({ code: "", balance: "" });
       setDialogOpen(false);
@@ -1219,7 +1225,7 @@ function GiftCardsTab() {
                       code: e.target.value.toUpperCase(),
                     }))
                   }
-                  placeholder="FROST-XXXX-XXXX"
+                  placeholder="GW-XXXX-XXXX"
                   className="mt-1 font-mono"
                   data-ocid="staff.giftcard.code.input"
                 />
@@ -1307,6 +1313,304 @@ function GiftCardsTab() {
   );
 }
 
+// ── Banners Tab ────────────────────────────────────────────────────────────────
+function BannersTab() {
+  const [banners, setBanners] = useState<PromoBanner[]>(() =>
+    loadPromoBanners(),
+  );
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const emptyForm = {
+    title: "",
+    subtitle: "",
+    ctaText: "",
+    ctaLink: "",
+    bgColor: "#1a4d2e",
+  };
+  const [form, setForm] = useState(emptyForm);
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (banner: PromoBanner) => {
+    setEditingId(banner.id);
+    setForm({
+      title: banner.title,
+      subtitle: banner.subtitle,
+      ctaText: banner.ctaText,
+      ctaLink: banner.ctaLink,
+      bgColor: banner.bgColor,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!form.title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+    let updated: PromoBanner[];
+    if (editingId !== null) {
+      updated = banners.map((b) =>
+        b.id === editingId ? { ...b, ...form } : b,
+      );
+      toast.success("Banner updated");
+    } else {
+      const newBanner: PromoBanner = {
+        id: `banner-${Date.now()}`,
+        ...form,
+      };
+      updated = [...banners, newBanner];
+      toast.success("Banner added");
+    }
+    setBanners(updated);
+    savePromoBanners(updated);
+    setDialogOpen(false);
+    setForm(emptyForm);
+    setEditingId(null);
+  };
+
+  const handleDelete = (id: string) => {
+    const updated = banners.filter((b) => b.id !== id);
+    setBanners(updated);
+    savePromoBanners(updated);
+    toast.success("Banner deleted");
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-display font-bold text-lg">Promotional Banners</h2>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setForm(emptyForm);
+              setEditingId(null);
+            }
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button
+              onClick={openAdd}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-9"
+              data-ocid="staff.banner.open_modal_button"
+            >
+              <Plus className="h-4 w-4" />
+              Add Banner
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md" data-ocid="staff.banner.dialog">
+            <DialogHeader>
+              <DialogTitle>
+                {editingId !== null ? "Edit Banner" : "New Banner"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <Label>Title *</Label>
+                <Input
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, title: e.target.value }))
+                  }
+                  placeholder="Spring Sale — 20% Off"
+                  className="mt-1"
+                  data-ocid="staff.banner.title.input"
+                />
+              </div>
+              <div>
+                <Label>Subtitle</Label>
+                <Input
+                  value={form.subtitle}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, subtitle: e.target.value }))
+                  }
+                  placeholder="Limited time offer on all plants"
+                  className="mt-1"
+                  data-ocid="staff.banner.subtitle.input"
+                />
+              </div>
+              <div>
+                <Label>CTA Text</Label>
+                <Input
+                  value={form.ctaText}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, ctaText: e.target.value }))
+                  }
+                  placeholder="Shop Now"
+                  className="mt-1"
+                  data-ocid="staff.banner.cta_text.input"
+                />
+              </div>
+              <div>
+                <Label>CTA Link</Label>
+                <Input
+                  value={form.ctaLink}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, ctaLink: e.target.value }))
+                  }
+                  placeholder="#products or https://..."
+                  className="mt-1"
+                  data-ocid="staff.banner.cta_link.input"
+                />
+              </div>
+              <div>
+                <Label>Background Colour</Label>
+                <div className="flex items-center gap-3 mt-1">
+                  <input
+                    type="color"
+                    value={form.bgColor}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, bgColor: e.target.value }))
+                    }
+                    className="h-9 w-16 rounded cursor-pointer border border-border p-0.5 bg-transparent"
+                    data-ocid="staff.banner.bg_color.input"
+                  />
+                  <Input
+                    value={form.bgColor}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, bgColor: e.target.value }))
+                    }
+                    placeholder="#1a4d2e"
+                    className="font-mono flex-1"
+                  />
+                </div>
+              </div>
+              {/* Preview */}
+              <div
+                className="rounded-lg p-4 mt-1"
+                style={{ backgroundColor: form.bgColor || "#1a4d2e" }}
+              >
+                <p className="text-white font-semibold text-sm">
+                  {form.title || "Banner Title"}
+                </p>
+                {form.subtitle && (
+                  <p className="text-white/70 text-xs mt-0.5">
+                    {form.subtitle}
+                  </p>
+                )}
+                {form.ctaText && (
+                  <span className="mt-2 inline-block text-xs text-white bg-white/20 rounded px-2 py-0.5">
+                    {form.ctaText}
+                  </span>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                data-ocid="staff.banner.cancel.button"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                data-ocid="staff.banner.save.button"
+              >
+                {editingId !== null ? "Update Banner" : "Add Banner"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {banners.length === 0 ? (
+        <div
+          className="text-center py-12 text-muted-foreground"
+          data-ocid="staff.banner.empty_state"
+        >
+          <Megaphone className="h-8 w-8 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No promotional banners yet.</p>
+          <p className="text-xs mt-1 opacity-60">
+            Add banners to highlight promotions on the homepage.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3" data-ocid="staff.banner.list">
+          {banners.map((banner, i) => (
+            <div
+              key={banner.id}
+              className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card"
+              data-ocid={`staff.banner.item.${i + 1}`}
+            >
+              {/* Colour swatch */}
+              <div
+                className="h-12 w-12 rounded-lg shrink-0 shadow-sm"
+                style={{ backgroundColor: banner.bgColor }}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">{banner.title}</p>
+                {banner.subtitle && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {banner.subtitle}
+                  </p>
+                )}
+                {banner.ctaText && (
+                  <p className="text-xs text-primary mt-0.5 truncate">
+                    CTA: {banner.ctaText}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => openEdit(banner)}
+                  data-ocid={`staff.banner.edit.button.${i + 1}`}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 hover:text-destructive"
+                      data-ocid={`staff.banner.delete.button.${i + 1}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent data-ocid="staff.banner.delete.dialog">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Banner?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently remove "{banner.title}" from the
+                        homepage.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel data-ocid="staff.banner.delete.cancel.button">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDelete(banner.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        data-ocid="staff.banner.delete.confirm.button"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main StaffPage ─────────────────────────────────────────────────────────────
 export function StaffPage() {
   const [authenticated, setAuthenticated] = useState(
@@ -1325,7 +1629,7 @@ export function StaffPage() {
             Staff Panel
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Manage your Frost store
+            Manage your Gardening World store
           </p>
         </div>
         <Button
@@ -1393,6 +1697,14 @@ export function StaffPage() {
             <Gift className="h-4 w-4" />
             Gift Cards
           </TabsTrigger>
+          <TabsTrigger
+            value="banners"
+            className="gap-2"
+            data-ocid="staff.banners.tab"
+          >
+            <Megaphone className="h-4 w-4" />
+            Banners
+          </TabsTrigger>
         </TabsList>
 
         <div className="crystal-card rounded-xl p-6">
@@ -1413,6 +1725,9 @@ export function StaffPage() {
           </TabsContent>
           <TabsContent value="giftcards">
             <GiftCardsTab />
+          </TabsContent>
+          <TabsContent value="banners">
+            <BannersTab />
           </TabsContent>
         </div>
       </Tabs>

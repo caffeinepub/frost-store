@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Heart, Snowflake } from "lucide-react";
+import { Heart, Leaf } from "lucide-react";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -12,14 +12,14 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-2 mb-3">
-              <Snowflake className="h-5 w-5 text-accent" strokeWidth={1.5} />
+              <Leaf className="h-5 w-5 text-white/80" strokeWidth={1.5} />
               <span className="font-display text-lg font-bold text-white">
                 Frost
               </span>
             </div>
             <p className="text-white/60 text-sm leading-relaxed max-w-xs">
-              Premium physical products delivered to your door. Quality crafted
-              for those who appreciate the finer things.
+              Quality plants and garden products delivered to your door.
+              Carefully selected for those who love their outdoor spaces.
             </p>
           </div>
 
@@ -87,7 +87,7 @@ export function Footer() {
           <p className="flex items-center gap-1">
             Built with{" "}
             <Heart
-              className="h-3 w-3 text-rose-400 inline"
+              className="h-3 w-3 text-rose-300 inline"
               fill="currentColor"
             />{" "}
             using{" "}
@@ -95,7 +95,7 @@ export function Footer() {
               href={utmLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent hover:text-accent/80 transition-colors"
+              className="text-white/60 hover:text-white transition-colors"
             >
               caffeine.ai
             </a>

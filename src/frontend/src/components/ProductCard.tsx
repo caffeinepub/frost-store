@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { Link } from "@tanstack/react-router";
-import { ShoppingCart, Star } from "lucide-react";
+import { Leaf, ShoppingCart, Star } from "lucide-react";
 import { toast } from "sonner";
 import type { Product } from "../backend.d";
 
@@ -33,7 +33,7 @@ export function ProductCard({ product, index = 1 }: ProductCardProps) {
 
   return (
     <article
-      className="crystal-card rounded-lg overflow-hidden group"
+      className="crystal-card rounded overflow-hidden group"
       data-ocid={`product.item.${index}`}
     >
       <Link
@@ -52,11 +52,11 @@ export function ProductCard({ product, index = 1 }: ProductCardProps) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-secondary">
-              <span className="text-muted-foreground text-4xl">❄</span>
+              <Leaf className="h-10 w-10 text-primary/30" strokeWidth={1} />
             </div>
           )}
           {Number(product.stock) <= 5 && Number(product.stock) > 0 && (
-            <Badge className="absolute top-3 left-3 bg-amber-500 text-white border-0 text-xs">
+            <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground border-0 text-xs">
               Low stock
             </Badge>
           )}
@@ -80,7 +80,7 @@ export function ProductCard({ product, index = 1 }: ProductCardProps) {
             <span className="font-display font-bold text-primary text-lg">
               {formatPrice(product.price)}
             </span>
-            <div className="flex items-center gap-1 text-amber-400">
+            <div className="flex items-center gap-1 text-accent">
               <Star className="h-3 w-3 fill-current" />
               <span className="text-xs text-muted-foreground">4.8</span>
             </div>

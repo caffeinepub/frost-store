@@ -16,7 +16,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['"Cabinet Grotesk"', "sans-serif"],
+        display: ['"Playfair Display"', "serif"],
         sans: ['"General Sans"', "sans-serif"],
       },
       colors: {
@@ -53,11 +53,11 @@ export default {
           DEFAULT: "oklch(var(--card))",
           foreground: "oklch(var(--card-foreground))",
         },
-        frost: {
-          navy: "oklch(var(--frost-navy))",
-          ice: "oklch(var(--frost-ice))",
-          crystal: "oklch(var(--frost-crystal))",
-          snow: "oklch(var(--frost-snow))",
+        garden: {
+          green: "oklch(var(--garden-green))",
+          sage: "oklch(var(--garden-sage))",
+          cream: "oklch(var(--garden-cream))",
+          terracotta: "oklch(var(--garden-terracotta))",
         },
         chart: {
           1: "oklch(var(--chart-1))",
@@ -84,8 +84,8 @@ export default {
       },
       boxShadow: {
         xs: "0 1px 2px 0 rgba(0,0,0,0.05)",
-        frost: "0 4px 24px oklch(0.62 0.14 218 / 0.12)",
-        "frost-lg": "0 8px 40px oklch(0.62 0.14 218 / 0.18)",
+        frost: "0 4px 24px oklch(0.32 0.13 145 / 0.10)",
+        "frost-lg": "0 8px 40px oklch(0.32 0.13 145 / 0.16)",
       },
       keyframes: {
         "accordion-down": {

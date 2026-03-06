@@ -1,11 +1,12 @@
 import { ProductCard } from "@/components/ProductCard";
+import { PromoBanners } from "@/components/PromoBanners";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProducts } from "@/hooks/useQueries";
 import { useCategories } from "@/hooks/useQueries";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Gift, Shield, Snowflake, Truck } from "lucide-react";
+import { ArrowRight, Gift, Leaf, Shield, Truck } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 
@@ -39,7 +40,7 @@ export function HomePage() {
       desc: "Give the perfect present",
     },
     {
-      icon: Snowflake,
+      icon: Leaf,
       title: "Premium Quality",
       desc: "Carefully curated products",
     },
@@ -57,26 +58,25 @@ export function HomePage() {
           alt="Frost Store"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 frost-gradient opacity-75" />
+        <div className="absolute inset-0 hero-gradient" />
         <div className="relative container mx-auto px-4 py-24 flex flex-col items-start justify-center h-full min-h-[520px]">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: "easeOut" }}
           >
-            <Badge className="mb-4 bg-accent/20 text-accent border-accent/30 text-xs font-medium px-3 py-1">
-              ✦ New Collection Available
+            <Badge className="mb-4 bg-accent/20 text-white border-accent/50 text-xs font-medium px-3 py-1">
+              ✦ Spring Collection
             </Badge>
-            <h1 className="font-display text-5xl md:text-7xl font-bold text-white leading-[0.95] mb-6 max-w-2xl">
-              Refined.
+            <h1 className="font-display text-5xl md:text-7xl font-bold text-white leading-[1.05] mb-6 max-w-2xl">
+              Beautiful
               <br />
-              Curated.
+              Gardens
               <br />
-              <span className="text-accent">Frost.</span>
+              <span style={{ color: "oklch(0.82 0.14 55)" }}>Start Here.</span>
             </h1>
-            <p className="text-white/70 text-lg max-w-md mb-8 leading-relaxed">
-              Premium physical products selected for those who appreciate
-              quality in every detail.
+            <p className="text-white/80 text-lg max-w-md mb-8 leading-relaxed">
+              Quality plants and garden products delivered to your door.
             </p>
             <div className="flex gap-3">
               <a href="#products">
@@ -93,7 +93,7 @@ export function HomePage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10 hover:border-white/50"
+                  className="border-white/50 text-white hover:bg-white/10 hover:border-white/70"
                   data-ocid="hero.register.button"
                 >
                   Create Account
@@ -110,8 +110,8 @@ export function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {features.map((f) => (
               <div key={f.title} className="flex items-center gap-3 py-2">
-                <div className="h-9 w-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                  <f.icon className="h-4 w-4 text-accent" />
+                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <f.icon className="h-4 w-4 text-primary" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">
@@ -124,6 +124,9 @@ export function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Promo Banners */}
+      <PromoBanners />
 
       {/* Products */}
       <section id="products" className="container mx-auto px-4 py-16">
@@ -184,7 +187,7 @@ export function HomePage() {
             {Array.from({ length: 8 }, (_, i) => String(i)).map((key) => (
               <div
                 key={key}
-                className="rounded-lg overflow-hidden border border-border"
+                className="rounded overflow-hidden border border-border"
               >
                 <Skeleton className="aspect-[4/3] w-full" />
                 <div className="p-4 space-y-2">
@@ -204,7 +207,7 @@ export function HomePage() {
             data-ocid="product.empty_state"
           >
             <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-secondary mb-6">
-              <Snowflake className="h-9 w-9 text-accent" strokeWidth={1} />
+              <Leaf className="h-9 w-9 text-primary" strokeWidth={1} />
             </div>
             <h3 className="font-display text-xl font-semibold text-foreground mb-2">
               No products yet
@@ -258,11 +261,11 @@ export function HomePage() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="frost-gradient rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-6"
+          className="frost-gradient rounded p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-6"
         >
           <div>
             <h3 className="font-display text-2xl font-bold text-white mb-2">
-              Give the Gift of Frost
+              Give the Gift of Gardening World
             </h3>
             <p className="text-white/70 max-w-md">
               Gift cards available from £10 — the perfect present for anyone who

@@ -1,52 +1,34 @@
-# Frost Store
+# Gardening World
 
 ## Current State
-New project. No existing code.
+- Ecommerce store named "Frost Store" with a Dobbies-inspired garden centre aesthetic
+- Staff panel at `/staff` with Products, Categories, Coupons, Payment, Orders, Gift Cards tabs
+- HomePage has a static hero section, features strip, product grid, and gift card CTA
+- No promotional banners exist anywhere in the app
+- All "Frost" / "Frost Store" branding throughout the UI
 
 ## Requested Changes (Diff)
 
 ### Add
-- Full ecommerce store named "Frost" selling physical products
-- Customer account system: register, login, profile with saved delivery address
-- Order tracking and order history for logged-in customers
-- Gift card purchase and redemption in customer profile
-- Staff panel (access code: staff2026) for store management
-- Staff: manage product listings (create, edit, delete) with categories
-- Staff: manage product categories
-- Staff: configure payment info (currently PayPal only)
-- Staff: create coupons (percentage off, fixed GBP off)
-- Automatic free shipping on orders over £50
-- Gift card creation by staff; redemption by customers at checkout
+- Promotional banners section on the HomePage, displayed between the hero and the features strip (or between features strip and product grid). Up to 3 banners, each with: title, subtitle, CTA text, CTA link, and a background colour or gradient.
+- "Banners" tab in the Staff Panel, allowing staff to add/edit/delete the promotional banners (stored in localStorage for frontend-only persistence since no backend schema change is needed).
 
 ### Modify
-- N/A (new project)
+- Rename all UI text, titles, and labels from "Frost" / "Frost Store" to "Gardening World"
+- StaffPage: session storage key should change from `frost_staff_auth` to `gw_staff_auth`
+- StaffPage: gift card generate code prefix changes from `FROST-` to `GW-`
+- StaffPage: localStorage key for gift cards changes from `frost_issued_gift_cards` to `gw_issued_gift_cards`
+- StaffPage: default payment details text should reference "Gardening World" instead of "Frost Store"
+- StaffPage: "Manage your Frost store" subtitle → "Manage your Gardening World store"
+- StaffPage: "Lock Panel" description subtitle update
+- GiftCard CTA section on HomePage: title "Give the Gift of Frost" → "Give the Gift of Gardening World"
 
 ### Remove
-- N/A (new project)
+- Nothing removed
 
 ## Implementation Plan
-
-### Backend (Motoko)
-- User accounts: register/login with username + password, store profile data (delivery address)
-- Products: id, name, description, price (GBP pence), stock, category, imageUrl, active flag
-- Categories: id, name
-- Orders: id, userId, items (productId, qty, price), subtotal, discount, shipping, total, status, createdAt
-- Coupons: id, code, type (percent | fixed), value, active flag
-- Gift cards: id, code, balance (GBP pence), purchasedBy, redeemedBy
-- Payment info: key-value store for staff to record accepted methods/details
-- Staff authentication: hardcoded passphrase check (staff2026)
-- Free shipping rule: automatic when order subtotal >= £50
-
-### Frontend
-- Public storefront: homepage with product grid, category filter, product detail page
-- Cart: add/remove items, apply coupon code, apply gift card, show shipping calculation
-- Checkout: delivery address (pre-filled from profile), order summary, place order
-- Customer auth: register/login pages
-- Customer profile: view/edit delivery address, order history, gift card balance
-- Staff panel (/staff): login with code staff2026, then dashboard with tabs:
-  - Products tab: list, add, edit, delete products
-  - Categories tab: manage categories
-  - Coupons tab: create and list coupons
-  - Payment Info tab: view/edit accepted payment methods and details
-  - Orders tab: view all orders and update status
-  - Gift Cards tab: create gift cards, view issued cards
+1. Add a PromoBanners component in `components/` that renders banners stored in localStorage (`gw_promo_banners`). Each banner: `{ id, title, subtitle, ctaText, ctaLink, bgColor }`.
+2. Insert PromoBanners into HomePage between the features strip and the products section.
+3. Add a BannersTab component in StaffPage that lets staff add/edit/delete banners (title, subtitle, CTA text, CTA link, background colour picker). Stored/read from localStorage.
+4. Add the Banners tab to the StaffPage Tabs list with an appropriate icon (e.g. `Image` or `Megaphone`).
+5. Find and replace all "Frost" / "Frost Store" / "frost_" branding text with "Gardening World" / "gw_" across StaffPage.tsx and HomePage.tsx.

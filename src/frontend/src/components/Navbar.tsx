@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { Link, useLocation } from "@tanstack/react-router";
-import { Menu, ShoppingCart, Snowflake, User, X } from "lucide-react";
+import { Leaf, Menu, ShoppingCart, User, X } from "lucide-react";
 import { useState } from "react";
 
 export function Navbar() {
@@ -18,30 +18,30 @@ export function Navbar() {
   ];
 
   return (
-    <header className="frost-nav sticky top-0 z-50 shadow-frost">
+    <header className="frost-nav sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link
           to="/"
-          className="flex items-center gap-2 text-white no-underline"
+          className="flex items-center gap-2 no-underline"
           data-ocid="nav.link"
         >
-          <Snowflake className="h-6 w-6 text-accent" strokeWidth={1.5} />
-          <span className="font-display text-xl font-bold tracking-tight text-white">
+          <Leaf className="h-6 w-6 text-primary" strokeWidth={1.5} />
+          <span className="font-display text-xl font-bold tracking-tight text-primary">
             Frost
           </span>
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               to={link.href}
-              className={`text-sm font-medium transition-colors hover:text-accent ${
+              className={`text-sm font-medium transition-colors relative after:absolute after:bottom-[-2px] after:left-0 after:h-[2px] after:bg-primary after:transition-all ${
                 location.pathname === link.href
-                  ? "text-accent"
-                  : "text-white/80"
+                  ? "text-primary after:w-full"
+                  : "text-foreground/80 hover:text-primary after:w-0 hover:after:w-full"
               }`}
               data-ocid={`nav.${link.label.toLowerCase()}.link`}
             >
@@ -56,11 +56,11 @@ export function Navbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="text-white/80 hover:text-white hover:bg-white/10"
+              className="text-foreground/70 hover:text-primary hover:bg-primary/10"
             >
               <ShoppingCart className="h-5 w-5" />
               {totalItems > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-accent text-white border-0">
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary text-primary-foreground border-0">
                   {totalItems}
                 </Badge>
               )}
@@ -73,7 +73,7 @@ export function Navbar() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-white/80 hover:text-white hover:bg-white/10"
+                  className="text-foreground/70 hover:text-primary hover:bg-primary/10"
                 >
                   <User className="h-5 w-5" />
                 </Button>
@@ -82,7 +82,7 @@ export function Navbar() {
                 variant="ghost"
                 size="sm"
                 onClick={logout}
-                className="text-white/70 hover:text-white hover:bg-white/10 text-xs"
+                className="text-foreground/60 hover:text-primary hover:bg-primary/10 text-xs"
                 data-ocid="nav.logout.button"
               >
                 Sign out
@@ -94,7 +94,7 @@ export function Navbar() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-white/80 hover:text-white hover:bg-white/10"
+                  className="text-foreground/70 hover:text-primary hover:bg-primary/10"
                 >
                   Sign in
                 </Button>
@@ -102,7 +102,7 @@ export function Navbar() {
               <Link to="/register" data-ocid="nav.register.link">
                 <Button
                   size="sm"
-                  className="bg-accent hover:bg-accent/90 text-white border-0"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground border-0"
                 >
                   Register
                 </Button>
@@ -114,7 +114,7 @@ export function Navbar() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden text-white/80 hover:text-white hover:bg-white/10"
+            className="md:hidden text-foreground/70 hover:text-primary hover:bg-primary/10"
             onClick={() => setMobileOpen((o) => !o)}
             data-ocid="nav.menu.toggle"
           >
@@ -129,12 +129,12 @@ export function Navbar() {
 
       {/* Mobile nav */}
       {mobileOpen && (
-        <div className="md:hidden bg-primary/95 backdrop-blur border-t border-white/10 px-4 py-4 flex flex-col gap-3">
+        <div className="md:hidden bg-white border-t border-border px-4 py-4 flex flex-col gap-3">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               to={link.href}
-              className="text-white/80 hover:text-white text-sm font-medium py-2"
+              className="text-foreground/80 hover:text-primary text-sm font-medium py-2 transition-colors"
               onClick={() => setMobileOpen(false)}
               data-ocid={`nav.mobile.${link.label.toLowerCase()}.link`}
             >
@@ -144,7 +144,7 @@ export function Navbar() {
           {isLoggedIn ? (
             <button
               type="button"
-              className="text-white/70 hover:text-white text-sm text-left py-2"
+              className="text-foreground/60 hover:text-primary text-sm text-left py-2 transition-colors"
               onClick={() => {
                 logout();
                 setMobileOpen(false);
@@ -157,7 +157,7 @@ export function Navbar() {
             <>
               <Link
                 to="/login"
-                className="text-white/80 hover:text-white text-sm py-2"
+                className="text-foreground/80 hover:text-primary text-sm py-2 transition-colors"
                 onClick={() => setMobileOpen(false)}
                 data-ocid="nav.mobile.login.link"
               >
@@ -165,7 +165,7 @@ export function Navbar() {
               </Link>
               <Link
                 to="/register"
-                className="text-white/80 hover:text-white text-sm py-2"
+                className="text-foreground/80 hover:text-primary text-sm py-2 transition-colors"
                 onClick={() => setMobileOpen(false)}
                 data-ocid="nav.mobile.register.link"
               >
@@ -175,7 +175,7 @@ export function Navbar() {
           )}
           <Link
             to="/staff"
-            className="text-white/40 hover:text-white/70 text-xs py-2"
+            className="text-foreground/40 hover:text-foreground/70 text-xs py-2 transition-colors"
             onClick={() => setMobileOpen(false)}
             data-ocid="nav.mobile.staff.link"
           >
