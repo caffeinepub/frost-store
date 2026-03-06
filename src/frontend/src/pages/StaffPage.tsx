@@ -45,7 +45,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/context/AuthContext";
 import {
   useAllOrders,
   useCategories,
@@ -56,7 +55,6 @@ import {
   useCreateProduct,
   useDeleteCategory,
   useDeleteProduct,
-  useIsActorReady,
   usePaymentInfo,
   useProducts,
   useSetPaymentInfo,
@@ -64,7 +62,6 @@ import {
   useUpdateCategory,
   useUpdateOrderStatus,
   useUpdateProduct,
-  useVerifyStaffCode,
 } from "@/hooks/useQueries";
 import {
   ArrowDownToLine,
@@ -122,6 +119,8 @@ const STATUS_OPTIONS = [
   "cancelled",
 ];
 
+const STAFF_CODE = "staff2026";
+
 // ── Staff Login ────────────────────────────────────────────────────────────────
 function StaffLogin({
   onSuccess,
@@ -130,47 +129,16 @@ function StaffLogin({
 }) {
   const [code, setCode] = useState("");
   const [showCode, setShowCode] = useState(false);
-  const [step, setStep] = useState<"login" | "code" | "waiting">("login");
-  const [verifying, setVerifying] = useState(false);
-  const verify = useVerifyStaffCode();
-  const actorReady = useIsActorReady();
-  const { isLoggedIn, isInitializing, isLoggingIn, login } = useAuth();
+  const [error, setError] = useState(false);
 
-  // After login, wait for the actor to be ready before showing code form
-  useEffect(() => {
-    if (isLoggedIn && step === "login") {
-      setStep("waiting");
-    }
-  }, [isLoggedIn, step]);
-
-  // Transition from waiting → code once the actor is ready
-  useEffect(() => {
-    if (step === "waiting" && actorReady) {
-      setStep("code");
-    }
-  }, [step, actorReady]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code || verifying) return;
-    setVerifying(true);
-    try {
-      const ok = await verify.mutateAsync(code);
-      if (ok) {
-        sessionStorage.setItem(STAFF_SESSION_KEY, "true");
-        onSuccess();
-      } else {
-        toast.error("Invalid staff code");
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "";
-      toast.error(
-        msg.includes("Not ready")
-          ? "Still connecting to the network — please wait a moment and try again"
-          : "Verification failed — please try again",
-      );
-    } finally {
-      setVerifying(false);
+    if (code === STAFF_CODE) {
+      sessionStorage.setItem(STAFF_SESSION_KEY, "true");
+      onSuccess();
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 2000);
     }
   };
 
@@ -187,99 +155,59 @@ function StaffLogin({
           </div>
           <h1 className="font-display text-2xl font-bold">Staff Panel</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {step === "code"
-              ? "Enter your staff code to unlock the panel"
-              : step === "waiting"
-                ? "Connecting to network…"
-                : "Sign in with Internet Identity to continue"}
+            Enter your staff code to continue
           </p>
         </div>
 
-        {step === "login" && (
-          <div className="crystal-card rounded-2xl p-8 space-y-4">
-            <p className="text-sm text-muted-foreground text-center">
-              Staff must sign in before entering their access code.
-            </p>
-            <Button
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11 gap-2"
-              onClick={login}
-              disabled={isInitializing || isLoggingIn}
-              data-ocid="staff.ii_login.button"
-            >
-              {isInitializing || isLoggingIn ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {isInitializing ? "Loading…" : "Opening login…"}
-                </>
-              ) : (
-                <>
-                  <Lock className="h-4 w-4" />
-                  Sign in with Internet Identity
-                </>
-              )}
-            </Button>
-          </div>
-        )}
-
-        {step === "waiting" && (
-          <div className="crystal-card rounded-2xl p-8 flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground text-center">
-              Setting up your secure session, please wait…
-            </p>
-          </div>
-        )}
-
-        {step === "code" && (
-          <form
-            onSubmit={handleSubmit}
-            className="crystal-card rounded-2xl p-8 space-y-4"
-          >
-            <div>
-              <Label htmlFor="staff-code">Staff Code</Label>
-              <div className="relative mt-1">
-                <Input
-                  id="staff-code"
-                  type={showCode ? "text" : "password"}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="Enter staff code"
-                  className="pr-10"
-                  data-ocid="staff.code.input"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowCode((v) => !v)}
-                  data-ocid="staff.code.toggle"
-                >
-                  {showCode ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
+        <form
+          onSubmit={handleSubmit}
+          className="crystal-card rounded-2xl p-8 space-y-4"
+        >
+          <div>
+            <Label htmlFor="staff-code">Staff Code</Label>
+            <div className="relative mt-1">
+              <Input
+                id="staff-code"
+                type={showCode ? "text" : "password"}
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setError(false);
+                }}
+                placeholder="Enter staff code"
+                className={`pr-10 ${error ? "border-destructive" : ""}`}
+                data-ocid="staff.code.input"
+                autoFocus
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowCode((v) => !v)}
+                data-ocid="staff.code.toggle"
+              >
+                {showCode ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
             </div>
+            {error && (
+              <p className="text-destructive text-xs mt-1">
+                Incorrect staff code
+              </p>
+            )}
+          </div>
 
-            <Button
-              type="submit"
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11"
-              disabled={verifying || !code}
-              data-ocid="staff.login.button"
-            >
-              {verifying ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Verifying…
-                </>
-              ) : (
-                "Access Staff Panel"
-              )}
-            </Button>
-          </form>
-        )}
+          <Button
+            type="submit"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11"
+            disabled={!code}
+            data-ocid="staff.login.button"
+          >
+            Access Staff Panel
+          </Button>
+        </form>
       </motion.div>
     </div>
   );
