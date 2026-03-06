@@ -272,7 +272,7 @@ export function HomePage() {
               appreciates quality.
             </p>
           </div>
-          <Link to="/profile">
+          <Link to="/gift-cards">
             <Button
               size="lg"
               className="bg-white text-primary hover:bg-white/90 shrink-0 gap-2"

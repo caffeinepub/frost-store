@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Heart, Leaf } from "lucide-react";
+import { Heart, Leaf, MapPin } from "lucide-react";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -45,6 +45,14 @@ export function Footer() {
                   Cart
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/gift-cards"
+                  className="text-white/60 hover:text-white transition-colors"
+                >
+                  Gift Cards
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -83,7 +91,14 @@ export function Footer() {
         </div>
 
         <div className="border-t border-white/10 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
-          <p>© {year} Gardening World. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <p>© {year} Gardening World. All rights reserved.</p>
+            <span className="hidden sm:inline text-white/20">·</span>
+            <p className="flex items-center gap-1 text-white/50">
+              <MapPin className="h-3 w-3 text-white/40 inline" />
+              UK deliveries only
+            </p>
+          </div>
           <p className="flex items-center gap-1">
             Built with{" "}
             <Heart

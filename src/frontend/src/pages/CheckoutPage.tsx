@@ -10,7 +10,14 @@ import {
   useUserProfile,
 } from "@/hooks/useQueries";
 import { useNavigate } from "@tanstack/react-router";
-import { CheckCircle, CreditCard, Loader2, MapPin, Truck } from "lucide-react";
+import {
+  CheckCircle,
+  CreditCard,
+  Info,
+  Loader2,
+  MapPin,
+  Truck,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -238,6 +245,19 @@ export function CheckoutPage() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* UK delivery notice */}
+          <div
+            className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4"
+            data-ocid="checkout.uk_notice.section"
+          >
+            <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-amber-800 text-sm leading-relaxed">
+              <span className="font-semibold">UK deliveries only.</span> Please
+              ensure your delivery address is within the United Kingdom. We are
+              unable to ship to international addresses.
+            </p>
           </div>
 
           {/* Payment info */}

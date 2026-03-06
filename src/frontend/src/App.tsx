@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { CartPage } from "@/pages/CartPage";
 import { CheckoutPage } from "@/pages/CheckoutPage";
+import { GiftCardsPage } from "@/pages/GiftCardsPage";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { ProductPage } from "@/pages/ProductPage";
@@ -81,6 +82,12 @@ const staffRoute = createRoute({
   component: StaffPage,
 });
 
+const giftCardsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/gift-cards",
+  component: GiftCardsPage,
+});
+
 // ── Router ─────────────────────────────────────────────────────────────────────
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -91,6 +98,7 @@ const routeTree = rootRoute.addChildren([
   registerRoute,
   profileRoute,
   staffRoute,
+  giftCardsRoute,
 ]);
 
 const router = createRouter({ routeTree });

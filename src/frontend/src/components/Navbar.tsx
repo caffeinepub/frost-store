@@ -14,6 +14,7 @@ export function Navbar() {
 
   const navLinks = [
     { label: "Shop", href: "/" },
+    { label: "Gift Cards", href: "/gift-cards" },
     { label: "Profile", href: "/profile" },
   ];
 
@@ -43,7 +44,11 @@ export function Navbar() {
                   ? "text-primary after:w-full"
                   : "text-foreground/80 hover:text-primary after:w-0 hover:after:w-full"
               }`}
-              data-ocid={`nav.${link.label.toLowerCase()}.link`}
+              data-ocid={
+                link.href === "/gift-cards"
+                  ? "nav.giftcards.link"
+                  : `nav.${link.label.toLowerCase()}.link`
+              }
             >
               {link.label}
             </Link>
@@ -136,7 +141,11 @@ export function Navbar() {
               to={link.href}
               className="text-foreground/80 hover:text-primary text-sm font-medium py-2 transition-colors"
               onClick={() => setMobileOpen(false)}
-              data-ocid={`nav.mobile.${link.label.toLowerCase()}.link`}
+              data-ocid={
+                link.href === "/gift-cards"
+                  ? "nav.mobile.giftcards.link"
+                  : `nav.mobile.${link.label.toLowerCase()}.link`
+              }
             >
               {link.label}
             </Link>

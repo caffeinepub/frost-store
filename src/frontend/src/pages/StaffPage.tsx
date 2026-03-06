@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/context/AuthContext";
 import {
   useAllOrders,
   useCategories,
@@ -129,12 +130,25 @@ function StaffLogin({
 }) {
   const [code, setCode] = useState("");
   const [showCode, setShowCode] = useState(false);
+  const [step, setStep] = useState<"login" | "code">("login");
   const verify = useVerifyStaffCode();
   const actorReady = useIsActorReady();
+  const { isLoggedIn, isInitializing, isLoggingIn, login } = useAuth();
+
+  // Once user logs in, move to code step
+  useEffect(() => {
+    if (isLoggedIn) {
+      setStep("code");
+    }
+  }, [isLoggedIn]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code) return;
+    if (!actorReady) {
+      toast.error("Still connecting — please wait a moment and try again");
+      return;
+    }
     try {
       const ok = await verify.mutateAsync(code);
       if (ok) {
@@ -143,8 +157,13 @@ function StaffLogin({
       } else {
         toast.error("Invalid staff code");
       }
-    } catch {
-      toast.error("Verification failed");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      toast.error(
+        msg.includes("Not ready")
+          ? "Still connecting to the network — please wait a moment and try again"
+          : "Verification failed — please try again",
+      );
     }
   };
 
@@ -161,62 +180,91 @@ function StaffLogin({
           </div>
           <h1 className="font-display text-2xl font-bold">Staff Panel</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Enter your staff code to continue
+            {step === "login"
+              ? "Sign in with Internet Identity to continue"
+              : "Enter your staff code to unlock the panel"}
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="crystal-card rounded-2xl p-8 space-y-4"
-        >
-          <div>
-            <Label htmlFor="staff-code">Staff Code</Label>
-            <div className="relative mt-1">
-              <Input
-                id="staff-code"
-                type={showCode ? "text" : "password"}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="Enter staff code"
-                className="pr-10"
-                data-ocid="staff.code.input"
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowCode((v) => !v)}
-                data-ocid="staff.code.toggle"
-              >
-                {showCode ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
+        {step === "login" ? (
+          <div className="crystal-card rounded-2xl p-8 space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Staff must sign in before entering their access code.
+            </p>
+            <Button
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11 gap-2"
+              onClick={login}
+              disabled={isInitializing || isLoggingIn}
+              data-ocid="staff.ii_login.button"
+            >
+              {isInitializing || isLoggingIn ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {isInitializing ? "Loading…" : "Opening login…"}
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4" />
+                  Sign in with Internet Identity
+                </>
+              )}
+            </Button>
           </div>
-
-          <Button
-            type="submit"
-            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11"
-            disabled={verify.isPending || !code || !actorReady}
-            data-ocid="staff.login.button"
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            className="crystal-card rounded-2xl p-8 space-y-4"
           >
-            {!actorReady ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Loading…
-              </>
-            ) : verify.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Verifying…
-              </>
-            ) : (
-              "Access Staff Panel"
-            )}
-          </Button>
-        </form>
+            <div>
+              <Label htmlFor="staff-code">Staff Code</Label>
+              <div className="relative mt-1">
+                <Input
+                  id="staff-code"
+                  type={showCode ? "text" : "password"}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="Enter staff code"
+                  className="pr-10"
+                  data-ocid="staff.code.input"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowCode((v) => !v)}
+                  data-ocid="staff.code.toggle"
+                >
+                  {showCode ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11"
+              disabled={verify.isPending || !code || !actorReady}
+              data-ocid="staff.login.button"
+            >
+              {!actorReady ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Connecting…
+                </>
+              ) : verify.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Verifying…
+                </>
+              ) : (
+                "Access Staff Panel"
+              )}
+            </Button>
+          </form>
+        )}
       </motion.div>
     </div>
   );
