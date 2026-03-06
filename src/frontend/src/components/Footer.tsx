@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Heart, Leaf, MapPin } from "lucide-react";
+import { Heart, Leaf, LockKeyhole, MapPin } from "lucide-react";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -99,22 +99,32 @@ export function Footer() {
               UK deliveries only
             </p>
           </div>
-          <p className="flex items-center gap-1">
-            Built with{" "}
-            <Heart
-              className="h-3 w-3 text-rose-300 inline"
-              fill="currentColor"
-            />{" "}
-            using{" "}
-            <a
-              href={utmLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/60 hover:text-white transition-colors"
+          <div className="flex items-center gap-4">
+            <p className="flex items-center gap-1">
+              Built with{" "}
+              <Heart
+                className="h-3 w-3 text-rose-300 inline"
+                fill="currentColor"
+              />{" "}
+              using{" "}
+              <a
+                href={utmLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white/60 hover:text-white transition-colors"
+              >
+                caffeine.ai
+              </a>
+            </p>
+            <Link
+              to="/staff"
+              data-ocid="footer.staff.link"
+              className="flex items-center gap-1 text-white/30 hover:text-white/60 transition-colors border border-white/10 hover:border-white/25 rounded px-2 py-1"
             >
-              caffeine.ai
-            </a>
-          </p>
+              <LockKeyhole className="h-3 w-3" />
+              Staff Panel
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
